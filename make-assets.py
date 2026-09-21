@@ -1,54 +1,56 @@
 # -*- coding: utf-8 -*-
-"""أيقونة التطبيق وشاشة الإقلاع من شعار «أولوية العناية».
-   الشعار شريط عريض: اسم عربي + مربّع FC. المربّع وحده يصلح لأيقونة."""
+"""أيقونة التطبيق وشاشة الإقلاع من شعار «أولوية العناية» المتجه (PDF).
+   المصدر متجه فتُستخرج بأي دقة — لا تكبير لصورة صغيرة."""
 import os
 import sys
 
-from PIL import Image, ImageDraw
+import pymupdf
+from PIL import Image
 
+Image.MAX_IMAGE_PIXELS = None
 sys.stdout.reconfigure(encoding='utf-8')
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-SRC = os.path.join(HERE, 'resources', 'logo-source.jpg')
 OUT = os.path.join(HERE, 'resources')
+PDF = os.path.join(OUT, 'logo-source.pdf')
 
-logo = Image.open(SRC).convert('RGB')
-W, H = logo.size
-print('الشعار الكامل:', logo.size)
+doc = pymupdf.open(PDF)
+page = doc[0]
+side = max(page.rect.width, page.rect.height)
 
-# مربّع FC يقع في الطرف الأيمن من الشريط
-sq = logo.crop((int(W * 0.645), 0, W, H))
-# قصّ الهوامش البيضاء حوله
-g = sq.convert('L').point(lambda v: 255 if v < 246 else 0)
-box = g.getbbox()
-if box:
-    pad = 6
-    sq = sq.crop((max(0, box[0] - pad), max(0, box[1] - pad),
-                  min(sq.width, box[2] + pad), min(sq.height, box[3] + pad)))
-print('مربّع FC بعد القصّ:', sq.size)
+
+def render(px):
+    """يرسم الشعار بمقاس px بكسل مع قناة شفافة."""
+    m = pymupdf.Matrix(px / side, px / side)
+    pix = page.get_pixmap(matrix=m, alpha=True)
+    return Image.frombytes('RGBA', (pix.width, pix.height), pix.samples)
+
+
+def trim(im):
+    """يقصّ الفراغ الشفاف حول الشعار."""
+    bb = im.split()[-1].getbbox()
+    return im.crop(bb) if bb else im
+
 
 # ---------- الأيقونة 1024 على أبيض ----------
 S = 1024
+art = trim(render(2048))
 icon = Image.new('RGB', (S, S), (255, 255, 255))
-d = ImageDraw.Draw(icon)
-for y in range(S):                       # تدرّج أبيض خفيف جداً يعطي عمقاً
-    v = int(255 - 6 * (y / S))
-    d.line([(0, y), (S, y)], fill=(v, v, v))
-
-fit = int(S * 0.70)
-sc = min(fit / sq.width, fit / sq.height)
-art = sq.resize((max(1, int(sq.width * sc)), max(1, int(sq.height * sc))), Image.LANCZOS)
-icon.paste(art, ((S - art.width) // 2, (S - art.height) // 2))
+fit = int(S * 0.82)
+sc = min(fit / art.width, fit / art.height)
+a = art.resize((max(1, int(art.width * sc)), max(1, int(art.height * sc))), Image.LANCZOS)
+icon.paste(a, ((S - a.width) // 2, (S - a.height) // 2), a)
 icon.save(os.path.join(OUT, 'icon.png'))
-print('الأيقونة   :', icon.size)
+print('الأيقونة    :', icon.size, '| الشعار بعد القصّ:', art.size)
 
-# ---------- شاشة الإقلاع: الشعار الكامل على أبيض ----------
+# ---------- شاشة الإقلاع 2732 على أبيض ----------
 P = 2732
 sp = Image.new('RGB', (P, P), (255, 255, 255))
-fit = int(P * 0.42)
-sc = fit / logo.width
-full = logo.resize((int(logo.width * sc), int(logo.height * sc)), Image.LANCZOS)
-sp.paste(full, ((P - full.width) // 2, (P - full.height) // 2))
+big = trim(render(1600))
+fit = int(P * 0.40)
+sc = min(fit / big.width, fit / big.height)
+c = big.resize((int(big.width * sc), int(big.height * sc)), Image.LANCZOS)
+sp.paste(c, ((P - c.width) // 2, (P - c.height) // 2), c)
 sp.save(os.path.join(OUT, 'splash.png'))
 sp.save(os.path.join(OUT, 'splash-dark.png'))
 print('شاشة الإقلاع:', sp.size)
