@@ -60,12 +60,12 @@
       'html.care-app{-webkit-tap-highlight-color:transparent}',
       /* الشريط السفلي عائم، فنترك له مساحة أكبر */
       'html.care-app body{padding-bottom:calc(76px + var(--care-sab, env(safe-area-inset-bottom, 0px)))!important}',
-      /* المنطقة الآمنة + ارتفاع الرأس الثابت (يُقاس ويُوضع في --care-hdr) */
-      'html.care-app body{padding-top:calc(var(--care-sat, env(safe-area-inset-top, 0px)) + var(--care-hdr, 80px))!important;background:#fff}',
-      /* رأس الموقع يبقى ثابتاً أعلى الشاشة ولا يذهب مع التمرير */
-      'html.care-app header{position:fixed!important;top:var(--care-sat, env(safe-area-inset-top, 0px))!important;',
-      'inset-inline:0!important;z-index:99992!important;background:#fff!important;',
-      'box-shadow:0 2px 14px rgba(16,20,24,.10)!important}',
+      /* المنطقة الآمنة أعلى الشاشة فقط — رأس سلة يبقى في سياق الصفحة */
+      'html.care-app body{padding-top:var(--care-sat, env(safe-area-inset-top, 0px))!important;background:#fff}',
+      /* سلة تثبّت .header-inner بنفسها عند التمرير (وتُفرغ <header>)،
+         فنكتفي بإنزالها تحت المنطقة الآمنة ولا نصارع منطقها */
+      'html.care-app .header-inner{top:var(--care-sat, env(safe-area-inset-top, 0px))!important;z-index:99992!important}',
+      'html.care-app .header-inner.inner{box-shadow:0 2px 14px rgba(0,0,0,.08)}',
       /* وشريط أبيض ثابت يغطي ما ينزلق تحت شريط الحالة عند التمرير */
       '#caretop{position:fixed;top:0;inset-inline:0;z-index:99998;height:var(--care-sat, env(safe-area-inset-top, 0px));',
       'background:#fff;pointer-events:none}',
@@ -441,31 +441,10 @@
     document.body.appendChild(s);
   }
 
-  /* الرأس صار ثابتاً فخرج من سياق الصفحة — نقيس ارتفاعه ونحفظه في --care-hdr
-     ليعرف حشو body كم يُبعد المحتوى، وإلا اختفى أول المحتوى تحت الرأس. */
-  function headerHeight() {
-    var h = document.querySelector('header');
-    if (!h) return;
-    var measure = function () {
-      // نقيسه وهو في مكانه الطبيعي قبل أن تُطبَّق قاعدة التثبيت
-      var px = Math.round(h.getBoundingClientRect().height);
-      if (px > 20 && px < 220) {
-        document.documentElement.style.setProperty('--care-hdr', px + 'px');
-      }
-    };
-    measure();
-    // الارتفاع قد يتغيّر بعد تحميل الصور أو بتدوير الجهاز
-    setTimeout(measure, 1200);
-    setTimeout(measure, 4000);
-    addEventListener('orientationchange', function () { setTimeout(measure, 350); });
-    addEventListener('resize', function () { clearTimeout(headerHeight._t); headerHeight._t = setTimeout(measure, 250); });
-  }
-
   /* ---------- الإقلاع ---------- */
   function boot() {
     document.documentElement.classList.add('care-app');
     viewportFit();
-    headerHeight();          // يُقاس قبل التثبيت ليكون الارتفاع الطبيعي
     styles();
     safeTop();
     bar(); fixImages(); offline(); pull(); share(); links();
