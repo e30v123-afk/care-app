@@ -1,0 +1,37 @@
+{
+  "appId": "com.fc.firstcare",
+  "appName": "أولوية العناية",
+  "webDir": "www",
+  "backgroundColor": "#ffffff",
+  "appendUserAgentString": "CareApp",
+  "server": {
+    "url": "https://careksa.com",
+    "hostname": "careksa.com",
+    "androidScheme": "https",
+    "cleartext": false,
+    "allowNavigation": ["careksa.com", "*.careksa.com", "*.salla.sa"]
+  },
+  "ios": {
+    "contentInset": "never",
+    "scrollEnabled": true,
+    "backgroundColor": "#ffffff",
+    "appendUserAgentString": "CareApp",
+    "limitsNavigationsToAppBoundDomains": false
+  },
+  "android": {
+    "backgroundColor": "#ffffff",
+    "appendUserAgentString": "CareApp",
+    "allowMixedContent": false
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1200,
+      "launchAutoHide": true,
+      "backgroundColor": "#ffffff",
+      "androidScaleType": "CENTER_CROP",
+      "showSpinner": false
+    },
+    "StatusBar": { "overlaysWebView": false, "style": "LIGHT", "backgroundColor": "#ffffff" },
+    "LocalNotifications": { "smallIcon": "ic_stat_care", "iconColor": "#d4768f" }
+  }
+}
