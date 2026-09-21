@@ -154,18 +154,12 @@
   function go(u) { location.href = u.charAt(0) === '/' ? 'https://careksa.com' + u : u; }
   function path() { return location.pathname || '/'; }
 
-  /* سلة تعرض العدد في مكوّن salla-cart-summary أو في رابط السلة */
+  /* العدد في span.s-cart-summary-count داخل مكوّن سلة.
+     تنبيه: نص المكوّن كله يحوي إجمالي السعر («cart 238») فلا يصلح مصدراً. */
   function cartCount() {
-    try {
-      var s = window.salla;
-      if (s && s.cart && typeof s.cart.getCount === 'function') {
-        var n = s.cart.getCount();
-        if (typeof n === 'number') return n;
-      }
-    } catch (e) { /* تابع */ }
-    var el = document.querySelector('salla-cart-summary, a[href$="/cart"], a[href*="/cart"]');
+    var el = document.querySelector('.s-cart-summary-count, [class*="cart-summary-count"]');
     if (!el) return 0;
-    var txt = (el.getAttribute('count') || el.textContent || '')
+    var txt = (el.textContent || '')
       .replace(/[٠-٩]/g, function (d) { return '٠١٢٣٤٥٦٧٨٩'.indexOf(d); });
     var m = txt.match(/\d+/);
     return m ? parseInt(m[0], 10) : 0;
@@ -460,15 +454,24 @@
     var last = -1;
     var sync = function () { var n = cartCount(); if (n !== last) { last = n; badge(); } };
     sync();
-    var a = document.querySelector('a[href*="/cart/content"]');
-    if (a && window.MutationObserver) {
+    /* نراقب مكوّن سلة كله لأن العدّاد يُستبدل عند التحديث،
+       ونستمع كذلك لحدث سلة إن توفّر. */
+    var host = document.querySelector('salla-cart-summary') || document.body;
+    if (window.MutationObserver) {
       var t = 0;
       new MutationObserver(function () {
         clearTimeout(t);
         t = setTimeout(sync, 250);
-      }).observe(a, { childList: true, subtree: true, characterData: true });
+      }).observe(host, { childList: true, subtree: true, characterData: true });
     }
-    setInterval(sync, 4000);
+    try {
+      var ev = window.salla && window.salla.event;
+      if (ev && typeof ev.on === 'function') {
+        ev.on('cart::updated', function () { setTimeout(sync, 300); });
+        ev.on('cart::item.added', function () { setTimeout(sync, 300); });
+      }
+    } catch (e) { /* تجاهل */ }
+    setInterval(sync, 3000);
   }
 
   /* نراقب نوافذ الموقع (Bootstrap) لنُخفي الشريط أثناء فتحها */
