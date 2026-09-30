@@ -37,7 +37,13 @@
     tag: '<path d="M20.6 12.6 12.6 20.6a2 2 0 0 1-2.8 0l-6.4-6.4a2 2 0 0 1-.6-1.4V4.6a2 2 0 0 1 2-2h8.2a2 2 0 0 1 1.4.6l6.2 6.2a2 2 0 0 1 0 2.8z"/><circle cx="7.6" cy="7.6" r="1.4"/>',
     share: '<circle cx="18" cy="5.5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="18.5" r="2.6"/><path d="M8.3 10.8 15.7 6.8M8.3 13.2l7.4 4"/>',
     wifi: '<path d="M2 8.8a15 15 0 0 1 20 0"/><path d="M5.5 12.6a10 10 0 0 1 13 0"/><path d="M9 16.3a5 5 0 0 1 6 0"/><circle cx="12" cy="20" r="1.1"/>',
-    back: '<path d="M15 5l-7 7 7 7"/>'
+    back: '<path d="M15 5l-7 7 7 7"/>',
+    x: '<path d="M6 6l12 12M18 6 6 18"/>',
+    hair: '<path d="M7 21c-1-5 0-9 1.5-12S12 3 12 3s2 3 3.5 6S18 16 17 21"/><path d="M10 21c-.4-3 .3-6 2-9 1.7 3 2.4 6 2 9"/>',
+    drop: '<path d="M12 3.2s6 6.6 6 11a6 6 0 0 1-12 0c0-4.4 6-11 6-11z"/><path d="M9.4 14.6a2.8 2.8 0 0 0 2.8 2.8"/>',
+    smoke: '<path d="M8 21h8"/><path d="M9.5 21l1-6h3l1 6"/><path d="M12 12c-2-1.6-2-3.4 0-5s2-3.4 0-5"/><path d="M15.4 11c-1.3-1-1.3-2.2 0-3.3"/>',
+    gift: '<rect x="3.5" y="8" width="17" height="4" rx="1"/><path d="M5 12v8h14v-8M12 8v12"/><path d="M12 8S10.5 3.5 8 4.2 8.6 8 12 8zM12 8s1.5-4.5 4-3.8S15.4 8 12 8z"/>',
+    grid: '<rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/>'
   };
   var svg = function (k, w) {
     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="' + (w || 1.7) +
@@ -62,10 +68,16 @@
       'html.care-app body{padding-bottom:calc(76px + var(--care-sab, env(safe-area-inset-bottom, 0px)))!important}',
       /* المنطقة الآمنة أعلى الشاشة فقط — رأس سلة يبقى في سياق الصفحة */
       'html.care-app body{padding-top:var(--care-sat, env(safe-area-inset-top, 0px))!important;background:#fff}',
-      /* سلة تثبّت .header-inner بنفسها عند التمرير (وتُفرغ <header>)،
-         فنكتفي بإنزالها تحت المنطقة الآمنة ولا نصارع منطقها */
-      'html.care-app .header-inner{top:var(--care-sat, env(safe-area-inset-top, 0px))!important;z-index:99992!important}',
-      'html.care-app .header-inner.inner{box-shadow:0 2px 14px rgba(0,0,0,.08)}',
+      /* الثيم يترك الرأس يمرّ مع الصفحة أول ~100px فيختفي للأعلى، ثم يضيف لـ#mainnav
+         fixed-pinned animated فيصير .header-inner ثابتاً وينزل بحركة ويُفرغ <header> فتقفز الصفحة.
+         في التطبيق نثبّت <header> نفسه (sticky) من البداية ونُبطل تثبيت الثيم وحركته. */
+      'html.care-app header.store-header{position:sticky!important;top:var(--care-sat, env(safe-area-inset-top, 0px))!important;z-index:99992!important}',
+      'html.care-app #mainnav,html.care-app #mainnav .header-inner{position:static!important;top:auto!important;',
+      'animation:none!important;transform:none!important;transition:none!important}',
+      /* في الرئيسية .app-inner عليها overflow-x:hidden فتصير حاوية تمرير ويبطل sticky؛
+         clip يقصّ الفائض الأفقي بالمثل دون أن يُنشئ حاوية تمرير */
+      'html.care-app .app-inner{overflow:visible!important;overflow-x:clip!important}',
+      'html.care-app .header-inner.inner{box-shadow:0 2px 14px rgba(0,0,0,.08);opacity:1!important}',   // الثيم يجعله 0.95 فتظهر المنتجات خلفه
       /* وشريط أبيض ثابت يغطي ما ينزلق تحت شريط الحالة عند التمرير */
       '#caretop{position:fixed;top:0;inset-inline:0;z-index:99998;height:var(--care-sat, env(safe-area-inset-top, 0px));',
       'background:#fff;pointer-events:none}',
@@ -91,21 +103,74 @@
       'pointer-events:none;opacity:0;background:var(--care);transform-origin:right;transform:scaleX(0)}',
       '#careload.on{opacity:1;animation:careld 2.4s cubic-bezier(.1,.7,.2,1) forwards}',
       '@keyframes careld{from{transform:scaleX(0)}to{transform:scaleX(.9)}}',
-      /* ورقة الأقسام */
+      /* ورقة الأقسام: شبكة بطاقات تصعد من الأسفل. الحركة transform/opacity فقط
+         (تُرسم على كرت الشاشة)، والبطاقات تظهر متتابعة. */
       '#caresheet{position:fixed;inset:0;z-index:99995;display:none;direction:rtl}',
       '#caresheet.open{display:block}',
-      '#caresheet .sc{position:absolute;inset:0;background:rgba(0,0,0,.45);opacity:0;transition:opacity .25s}',
+      '#caresheet .sc{position:absolute;inset:0;background:rgba(16,20,24,.42);opacity:0;transition:opacity .32s ease}',
       '#caresheet.in .sc{opacity:1}',
-      '#caresheet .sp{position:absolute;inset-inline:0;bottom:0;background:#fff;border-radius:22px 22px 0 0;',
-      'padding:10px 16px calc(24px + var(--care-sab, env(safe-area-inset-bottom, 0px)));transform:translateY(100%);transition:transform .3s cubic-bezier(.2,.8,.2,1)}',
-      '#caresheet.in .sp{transform:translateY(0)}',
-      '#caresheet .gr{width:40px;height:4px;border-radius:2px;background:#d8dde3;margin:0 auto 12px}',
-      '#caresheet h3{margin:0 0 12px;font-family:inherit;font-weight:700;font-size:17px;line-height:1.3;color:#101418}',
-      '#caresheet a{display:flex;align-items:center;gap:12px;padding:13px 10px;border-radius:14px;',
-      'text-decoration:none;color:#101418;font-family:inherit;font-weight:600;font-size:15px;line-height:1.3}',
-      '#caresheet a:active{background:#f3f5f7}',
-      '#caresheet a svg{width:22px;height:22px;color:var(--care);flex:none}',
-      '#caresheet a i{margin-inline-start:auto;color:#b7bfc7;font-style:normal}',
+      '#caresheet .sp{position:absolute;inset-inline:0;bottom:0;background:#fff;border-radius:28px 28px 0 0;',
+      'padding:8px 18px calc(22px + var(--care-sab, env(safe-area-inset-bottom, 0px)));',
+      'box-shadow:0 -10px 40px rgba(16,20,24,.14);transform:translate3d(0,100%,0);will-change:transform;',
+      'transition:transform .42s cubic-bezier(.22,1,.36,1);overscroll-behavior:contain}',
+      '#caresheet.in .sp{transform:translate3d(0,0,0)}',
+      '#caresheet.drag .sp{transition:none}',
+      '#caresheet .gr{width:38px;height:5px;border-radius:3px;background:#e3e6ea;margin:0 auto 14px}',
+      '#caresheet .hd{display:flex;align-items:center;justify-content:space-between;margin:0 2px 16px}',
+      '#caresheet h3{margin:0;font-family:inherit;font-weight:800;font-size:19px;line-height:1.3;color:#101418}',
+      '#caresheet .hd p{margin:3px 0 0;font-family:inherit;font-weight:500;font-size:12.5px;line-height:1.4;color:#8a939c}',
+      '#caresheet .x{width:34px;height:34px;border-radius:50%;border:0;background:#f2f4f6;color:#5b646d;',
+      'display:flex;align-items:center;justify-content:center;flex:none;touch-action:manipulation}',
+      '#caresheet .x svg{width:16px;height:16px}',
+      '#caresheet .gd{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}',
+      '#caresheet .gd a{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;',
+      'min-height:104px;padding:14px 6px 12px;border-radius:20px;background:#fbf1f4;text-decoration:none;',
+      'color:#101418;font-family:inherit;font-weight:700;font-size:12.5px;line-height:1.3;text-align:center;',
+      'opacity:0;transform:translate3d(0,14px,0) scale(.96);',
+      'transition:opacity .34s ease,transform .42s cubic-bezier(.22,1,.36,1),background .15s;touch-action:manipulation}',
+      '#caresheet.in .gd a{opacity:1;transform:none}',
+      '#caresheet .gd a:active{transform:scale(.95);background:#f6e2e8}',
+      '#caresheet .gd a b{width:46px;height:46px;border-radius:15px;background:#fff;display:flex;align-items:center;',
+      'justify-content:center;box-shadow:0 3px 10px rgba(212,118,143,.16)}',
+      '#caresheet .gd a svg{width:23px;height:23px;color:var(--care)}',
+      /* التخفيضات مميّزة بلون العلامة */
+      '#caresheet .gd a.hot{background:var(--care);color:#fff}',
+      '#caresheet .gd a.hot:active{background:#c7627d}',
+      '#caresheet .gd a.hot b{background:rgba(255,255,255,.22);box-shadow:none}',
+      '#caresheet .gd a.hot svg{color:#fff}',
+      /* القسم الحالي */
+      '#caresheet .gd a.cur{box-shadow:inset 0 0 0 2px var(--care)}',
+      '#caresheet .gd a.cur:after{content:"";position:absolute;top:10px;inset-inline-start:10px;width:7px;height:7px;',
+      'border-radius:50%;background:var(--care)}',
+      /* لوحتان تنزلقان أفقياً: الأقسام الرئيسية ← فروع القسم */
+      '#caresheet .vw{overflow:hidden;transition:height .38s cubic-bezier(.22,1,.36,1)}',
+      '#caresheet .tr{display:flex;width:200%;transition:transform .38s cubic-bezier(.22,1,.36,1);will-change:transform}',
+      '#caresheet .pn{width:50%;flex:none}',
+      '#caresheet.sub .tr{transform:translate3d(50%,0,0)}',
+      '#caresheet .pn2{max-height:62vh;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;',
+      'padding-bottom:4px;scrollbar-width:none}',
+      '#caresheet .pn2::-webkit-scrollbar{display:none}',
+      '#caresheet .bk{display:flex;align-items:center;gap:6px;border:0;background:none;padding:0;color:var(--care);',
+      'font-family:inherit;font-weight:700;font-size:14px;touch-action:manipulation}',
+      '#caresheet .bk svg{width:18px;height:18px;transform:scaleX(-1)}',
+      '#caresheet .all{display:flex;align-items:center;justify-content:space-between;margin:0 0 10px;padding:14px 16px;',
+      'border-radius:16px;background:var(--care);color:#fff;text-decoration:none;font-family:inherit;font-weight:700;font-size:14.5px}',
+      '#caresheet .all svg{width:18px;height:18px}',
+      '#caresheet .rw{border-bottom:1px solid #f0f2f4;padding:4px 0}',
+      '#caresheet .rw:last-child{border-bottom:0}',
+      '#caresheet .rw>a{display:flex;align-items:center;justify-content:space-between;padding:12px 4px;',
+      'color:#101418;text-decoration:none;font-family:inherit;font-weight:700;font-size:14.5px;border-radius:12px}',
+      '#caresheet .rw>a:active{background:#f7f8f9}',
+      '#caresheet .rw>a svg{width:16px;height:16px;color:#b7bfc7}',
+      '#caresheet .ch{display:flex;flex-wrap:wrap;gap:7px;padding:0 4px 10px}',
+      '#caresheet .ch a{padding:7px 12px;border-radius:999px;background:#fbf1f4;color:#7a3e50;text-decoration:none;',
+      'font-family:inherit;font-weight:600;font-size:12.5px;line-height:1.3}',
+      '#caresheet .ch a:active{background:#f3dbe3}',
+      '#caresheet .gd a i{position:absolute;top:9px;inset-inline-end:10px;min-width:18px;height:18px;padding:0 5px;',
+      'border-radius:9px;background:#fff;color:var(--care);font:700 10px/18px system-ui;font-style:normal}',
+      '#caresheet .gd a.hot i{background:rgba(255,255,255,.25);color:#fff}',
+      'html.care-sheet{overflow:hidden}',
+      '@media (prefers-reduced-motion:reduce){#caresheet .sp,#caresheet .gd a,#caresheet .sc{transition:none}}',
       /* شاشة انقطاع الاتصال */
       '#careoff{position:fixed;inset:0;z-index:99999;display:none;flex-direction:column;align-items:center;',
       'justify-content:center;gap:14px;background:#101418;color:#eef2f6;text-align:center;padding:30px;direction:rtl}',
@@ -253,22 +318,158 @@
   }
 
   /* ---------- ورقة الأقسام ---------- */
+  /* الأقسام تُقرأ من قائمة المتجر نفسها (ul.main-menu الموجودة في كل صفحات سلة)،
+     فأي قسم يُضاف أو يُحذف من لوحة سلة يظهر في التطبيق بلا تحديث.
+     آخر نسخة تُحفظ احتياطاً، وCATS الثابتة هي الملاذ الأخير. */
+  var MENU_KEY = 'care:menu:v1';
+  function readMenu() {
+    var ul = document.querySelector('ul.main-menu');
+    if (!ul) return null;
+    var walk = function (list, depth) {
+      var out = [];
+      [].forEach.call(list.children, function (li) {
+        var a = li.querySelector(':scope > a[href]');
+        if (!a || /display-all-category/.test(a.className)) return;
+        var t = (a.getAttribute('aria-label') || a.textContent || '').trim().replace(/\s+/g, ' ');
+        var h = a.getAttribute('href') || '';
+        if (!t || !/^https?:\/\/(www\.)?careksa\.com\//.test(h)) return;
+        var sub = li.querySelector(':scope > ul');
+        out.push({ t: t, h: h, c: sub && depth < 2 ? walk(sub, depth + 1) : [] });
+      });
+      return out;
+    };
+    var m = walk(ul, 0);
+    return m.length ? m : null;
+  }
+  function menu() {
+    var m = readMenu();
+    try {
+      if (m) localStorage.setItem(MENU_KEY, JSON.stringify(m));
+      else m = JSON.parse(localStorage.getItem(MENU_KEY) || 'null');
+    } catch (e) { /* التخزين غير متاح */ }
+    return m || CATS.map(function (c) { return { t: c.t, h: 'https://careksa.com' + encodeURI(c.u), c: [] }; });
+  }
+  /* أيقونة كل قسم من اسمه */
+  function iconFor(t) {
+    var rules = [[/تخفيض|عروض|خصم|تصفي/, 'tag'], [/ترند/, 'spark'], [/شعر/, 'hair'], [/بخور|عود|عطر/, 'smoke'],
+      [/مجموع|هدي|بكج/, 'gift'], [/شفا|شفاه|تنت|توريد/, 'lips'], [/عين|ماسكرا|كحل/, 'eye'], [/حواجب/, 'brow'],
+      [/مكياج/, 'lips'], [/وجه|بشرة/, 'face'], [/عناية|جسم|ترطيب/, 'drop']];
+    for (var i = 0; i < rules.length; i++) if (rules[i][0].test(t)) return rules[i][1];
+    return 'grid';
+  }
+  var esc = function (t) { return String(t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+
+  var sheetTimer = 0;
   function sheet(open) {
     var s = document.getElementById('caresheet');
     if (!s) {
       s = document.createElement('div');
       s.id = 'caresheet';
-      s.innerHTML = '<div class="sc"></div><div class="sp"><div class="gr"></div><h3>تصفّح الأقسام</h3>' +
-        CATS.map(function (c) {
-          return '<a href="https://careksa.com' + encodeURI(c.u) + '">' + svg(c.i) + '<span>' + c.t + '</span><i>' + svg('back') + '</i></a>';
-        }).join('') + '</div>';
+      s.setAttribute('role', 'dialog');
+      s.setAttribute('aria-label', 'الأقسام');
+      s.innerHTML = '<div class="sc"></div><div class="sp"><div class="gr"></div><div class="vw"><div class="tr">' +
+        '<div class="pn pn1"></div><div class="pn pn2"></div></div></div></div>';
       document.body.appendChild(s);
       s.querySelector('.sc').addEventListener('click', function () { sheet(false); });
-      s.addEventListener('click', function (e) { if (e.target.closest('a')) tap('LIGHT'); });
+      s.addEventListener('click', function (e) {
+        if (e.target.closest('.x')) { tap('LIGHT'); sheet(false); return; }
+        if (e.target.closest('.bk')) { tap('LIGHT'); level(s, null); return; }
+        var a = e.target.closest('a[href]');
+        if (!a) return;
+        var k = a.getAttribute('data-k');
+        if (k !== null && s._m[k] && s._m[k].c.length) {   // قسم له فروع: نعرض فروعه بدل الانتقال
+          e.preventDefault(); tap('LIGHT'); level(s, s._m[k]); return;
+        }
+        tap('LIGHT');
+        var ld = document.getElementById('careload');
+        if (ld) ld.classList.add('on');
+        setTimeout(function () { sheet(false); }, 160);   // تنزل الورقة والصفحة تُحمَّل خلفها
+      });
+      dragClose(s);
     }
+    clearTimeout(sheetTimer);
     document.documentElement.classList.toggle('care-sheet', !!open);
-    if (open) { s.classList.add('open'); requestAnimationFrame(function () { s.classList.add('in'); }); }
-    else { s.classList.remove('in'); setTimeout(function () { s.classList.remove('open'); }, 300); }
+    var sp = s.querySelector('.sp');
+    if (open) {
+      build(s);
+      sp.style.transform = '';
+      s.classList.add('open');
+      void s.offsetHeight;   // نثبّت الحالة الأولى قبل الحركة، وإلا ظهرت الورقة فجأة بلا انزلاق
+      s.classList.add('in');
+      fit(s);
+    } else {
+      [].forEach.call(s.querySelectorAll('.gd a'), function (a) { a.style.transitionDelay = '0ms'; });   // تختفي معاً
+      // بعد السحب تكمل الورقة نزولها من موضع الإصبع بدل أن تقفز للأعلى ثم تنزل
+      if (sp.style.transform) sp.style.transform = 'translate3d(0,100%,0)';
+      s.classList.remove('in');
+      sheetTimer = setTimeout(function () { s.classList.remove('open'); sp.style.transform = ''; level(s, null, true); }, 420);
+    }
+  }
+
+  function build(s) {
+    var m = s._m = menu();
+    var here = location.href.split('?')[0];
+    s.querySelector('.pn1').innerHTML =
+      '<div class="hd"><div><h3>الأقسام</h3><p>اختاري القسم اللي تبين تتصفحينه</p></div>' +
+      '<button type="button" class="x" aria-label="إغلاق">' + svg('x', 2.2) + '</button></div><div class="gd">' +
+      m.map(function (c, i) {
+        var cls = (/تخفيض|offers/.test(c.t + c.h) ? 'hot' : '') + (here === c.h ? ' cur' : '');
+        return '<a class="' + cls + '" data-k="' + i + '" style="transition-delay:' + (60 + i * 30) + 'ms" href="' + esc(c.h) + '">' +
+          (c.c.length ? '<i>' + c.c.length + '</i>' : '') + '<b>' + svg(iconFor(c.t)) + '</b><span>' + esc(c.t) + '</span></a>';
+      }).join('') + '</div>';
+  }
+
+  /* الانتقال بين اللوحتين. c=null يعود للأقسام الرئيسية */
+  function level(s, c, instant) {
+    var p2 = s.querySelector('.pn2');
+    if (c) {
+      p2.innerHTML = '<div class="hd"><button type="button" class="bk">' + svg('back', 2.2) + 'الأقسام</button>' +
+        '<button type="button" class="x" aria-label="إغلاق">' + svg('x', 2.2) + '</button></div>' +
+        '<a class="all" href="' + esc(c.h) + '"><span>كل ' + esc(c.t) + '</span>' + svg('back', 2.2) + '</a>' +
+        c.c.map(function (x) {
+          return '<div class="rw"><a href="' + esc(x.h) + '"><span>' + esc(x.t) + '</span>' + svg('back', 2) + '</a>' +
+            (x.c.length ? '<div class="ch">' + x.c.map(function (y) {
+              return '<a href="' + esc(y.h) + '">' + esc(y.t) + '</a>';
+            }).join('') + '</div>' : '') + '</div>';
+        }).join('');
+      p2.scrollTop = 0;
+      s.classList.add('sub');
+    } else {
+      s.classList.remove('sub');
+    }
+    var vw = s.querySelector('.vw');
+    if (instant) { vw.style.height = ''; return; }
+    fit(s);
+  }
+  /* ارتفاع الورقة يتبع اللوحة الظاهرة، فتكبر وتصغر بنعومة */
+  function fit(s) {
+    var vw = s.querySelector('.vw');
+    var pn = s.querySelector(s.classList.contains('sub') ? '.pn2' : '.pn1');
+    vw.style.height = pn.offsetHeight + 'px';
+  }
+
+  /* السحب لأسفل يغلق الورقة: تتبع الإصبع، وتُغلق إن تجاوزت ربعها أو كان السحب سريعاً */
+  function dragClose(s) {
+    var sp = s.querySelector('.sp'), y0 = null, t0 = 0, dy = 0;
+    sp.addEventListener('touchstart', function (e) {
+      if (e.touches.length !== 1) return;
+      var list = e.target.closest('.pn2');
+      if (list && list.scrollTop > 0) { y0 = null; return; }   // المستخدم يمرّر قائمة الفروع لا يسحب الورقة
+      y0 = e.touches[0].clientY; t0 = Date.now(); dy = 0;
+    }, { passive: true });
+    sp.addEventListener('touchmove', function (e) {
+      if (y0 === null) return;
+      dy = Math.max(0, e.touches[0].clientY - y0);
+      if (dy > 4) { s.classList.add('drag'); sp.style.transform = 'translate3d(0,' + dy + 'px,0)'; }
+    }, { passive: true });
+    sp.addEventListener('touchend', function () {
+      if (y0 === null) return;
+      var fast = dy > 40 && dy / Math.max(1, Date.now() - t0) > .5;
+      s.classList.remove('drag');
+      y0 = null;
+      if (dy > sp.offsetHeight / 4 || fast) sheet(false);
+      else sp.style.transform = '';
+    }, { passive: true });
   }
 
   /* ---------- بديل الصور المكسورة ---------- */
@@ -461,7 +662,22 @@
     statusBar(); backButton(); cartReminder(); watchModals();
     var SS = plug('SplashScreen');
     if (SS) setTimeout(function () { SS.hide().catch(function () { /* تجاهل */ }); }, 350);
-    watchCart();
+    watchCart(); liftWidget();
+  }
+
+  /* أداة واتساب (GetButton) تكتب bottom:14px !important في style العنصر نفسه،
+     فلا يغلبها أي CSS خارجي وتجلس فوق تبويب «الرئيسية». نرفعها من الكود بعد تحميلها المتأخر. */
+  function liftWidget() {
+    var n = 0;
+    var lift = function () {
+      var w = document.querySelector('[id^="gb-widget"]');
+      if (w) {
+        w.style.setProperty('bottom', 'calc(82px + var(--care-sab, env(safe-area-inset-bottom, 0px)))', 'important');
+        return;
+      }
+      if (++n < 20) setTimeout(lift, 1000);
+    };
+    lift();
   }
 
   /* تحديث الشارة عند تغيّر السلة دون إعادة تحميل.
