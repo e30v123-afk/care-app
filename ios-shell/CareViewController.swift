@@ -67,5 +67,23 @@ class CareViewController: CAPBridgeViewController {
                                               injectionTime: .atDocumentEnd,
                                               forMainFrameOnly: true))
         CAPLog.print("Care: حُقنت القشرة (\(source.count) حرفاً)")
+        injectLoginFix(controller)
+    }
+
+    /// نافذة دخول سلة iframe من accounts.salla.com، وأزرار Google/Facebook/Apple
+    /// فيها تفتح نافذة جديدة لمزوّد الدخول فيرميها كابستور على سفاري — رفضته آبل
+    /// ببند 4 (2026-09-30). نخفيها داخل التطبيق فقط، ويبقى الدخول بالجوال/البريد.
+    private func injectLoginFix(_ controller: WKUserContentController) {
+        let js = """
+        (function(){if(!/(^|\\.)accounts\\.salla\\.com$/.test(location.hostname))return;
+        var css='.s-login-modal-social-buttons,.s-login-modal-social-separator{display:none!important}';
+        function add(){if(document.getElementById('care-nosocial'))return;
+        var s=document.createElement('style');s.id='care-nosocial';s.textContent=css;
+        (document.head||document.documentElement).appendChild(s);}
+        add();document.addEventListener('DOMContentLoaded',add);})();
+        """
+        controller.addUserScript(WKUserScript(source: js,
+                                              injectionTime: .atDocumentStart,
+                                              forMainFrameOnly: false))
     }
 }

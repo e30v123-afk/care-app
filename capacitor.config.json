@@ -9,7 +9,7 @@
     "hostname": "careksa.com",
     "androidScheme": "https",
     "cleartext": false,
-    "allowNavigation": ["careksa.com", "*.careksa.com", "*.salla.sa"]
+    "allowNavigation": ["careksa.com", "*.careksa.com", "*.salla.sa", "*.salla.com", "*.salla.dev"]
   },
   "ios": {
     "contentInset": "never",
