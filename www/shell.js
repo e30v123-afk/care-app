@@ -72,19 +72,25 @@
       /* الشريط السفلي: عائم بحواف مقوّسة */
       '#carebar{position:fixed;inset-inline:14px;bottom:calc(9px + var(--care-sab, env(safe-area-inset-bottom, 0px)));z-index:99990;',
       'display:flex;border-radius:22px;padding:5px 5px 6px;',
-      'background:rgba(20,25,31,.62);backdrop-filter:blur(26px) saturate(180%);',
-      '-webkit-backdrop-filter:blur(26px) saturate(180%);',
+      /* تمويه خفيف: 26px+saturate كان يُثقل التمرير على الآيفون */
+      'background:rgba(20,25,31,.80);backdrop-filter:blur(12px);',
+      '-webkit-backdrop-filter:blur(12px);',
       'border:1px solid rgba(255,255,255,.14);',
       'box-shadow:0 8px 26px rgba(0,0,0,.24),0 1px 3px rgba(0,0,0,.14);',
       'direction:rtl;font-family:inherit}',
       '#carebar button{flex:1;background:none;border:0;padding:6px 2px 5px;display:flex;flex-direction:column;',
       'align-items:center;gap:2px;color:#c9d2d9;font-family:inherit;font-weight:600;font-size:9.5px;line-height:1.15;cursor:pointer;',
-      'letter-spacing:-.1px;position:relative;border-radius:16px;transition:color .18s,background .18s}',
+      'letter-spacing:-.1px;position:relative;border-radius:16px;transition:color .12s,background .12s;touch-action:manipulation}',
       '#carebar button svg{width:19px;height:19px;stroke-width:1.6;transition:transform .18s}',
       '#carebar button:active svg{transform:scale(.86)}',
       '#carebar button.on{color:var(--care);background:rgba(232,145,42,.20)}',
       '#carebar .bdg{position:absolute;top:2px;inset-inline-end:calc(50% - 17px);min-width:15px;height:15px;',
       'border-radius:8px;background:var(--care);color:#10140f;font:700 9px/15px system-ui;text-align:center;padding:0 3px}',
+      /* شريط التحميل: يظهر فور الضغط على تبويب حتى تُفتح الصفحة الجديدة */
+      '#careload{position:fixed;top:var(--care-sat, env(safe-area-inset-top, 0px));inset-inline:0;height:3px;z-index:99999;',
+      'pointer-events:none;opacity:0;background:var(--care);transform-origin:right;transform:scaleX(0)}',
+      '#careload.on{opacity:1;animation:careld 2.4s cubic-bezier(.1,.7,.2,1) forwards}',
+      '@keyframes careld{from{transform:scaleX(0)}to{transform:scaleX(.9)}}',
       /* ورقة الأقسام */
       '#caresheet{position:fixed;inset:0;z-index:99995;display:none;direction:rtl}',
       '#caresheet.open{display:block}',
@@ -175,14 +181,24 @@
         (t.badge ? '<span class="bdg" hidden></span>' : '') + '<span>' + t.t + '</span></button>';
     }).join('');
     document.body.appendChild(el);
+    var ld = document.createElement('div');
+    ld.id = 'careload';
+    document.body.appendChild(ld);
+    /* الانتقال بين التبويبات تحميل صفحة كاملة (١–٣ ث)، فنعطي إحساساً فورياً:
+       التبويب يتلوّن والشريط يتحرك لحظة الضغط، لا بعد وصول الصفحة. */
     el.addEventListener('click', function (e) {
       var b = e.target.closest('button'); if (!b) return;
       var t = TABS.filter(function (x) { return x.id === b.dataset.id; })[0];
       tap('LIGHT');
-      if (t.sheet) sheet(true);
-      else if (t.account) openAccount();
-      else go(t.u);
+      if (t.sheet) { sheet(true); return; }
+      if (t.account || (t.id === 'fav' && !loggedIn())) { openAccount(); return; }   // الزائر: نافذة الدخول مباشرة
+      if (t.m && t.m.test(path())) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }   // نفس الصفحة
+      document.querySelectorAll('#carebar button').forEach(function (x) { x.classList.toggle('on', x === b); });
+      ld.classList.add('on');
+      go(t.u);
     });
+    /* الرجوع من ذاكرة الصفحات (bfcache) يعيد الصفحة كما هي — نُطفئ الشريط */
+    addEventListener('pageshow', function () { ld.classList.remove('on'); active(); });
     active(); badge();
   }
   function active() {
@@ -207,10 +223,10 @@
     try {
       var s = window.salla;
       if (s && s.config && typeof s.config.get === 'function') {
+        /* الزائر له user.id أيضاً (type=guest) — فالنوع وحده هو الحكم،
+           وإلا ذهب «حسابي» لـ/profile ثم أعادته سلة للرئيسية (تحميلان). */
         var t = s.config.get('user.type');
-        if (t && t !== 'guest') return true;
-        var id = s.config.get('user.id');
-        if (id) return true;
+        if (t) return t !== 'guest';
       }
     } catch (e) { /* تابع */ }
     return /\/(profile|orders)/.test(location.pathname);
@@ -493,13 +509,22 @@
       document.documentElement.classList.toggle('care-modal', open);
     };
     apply();
+    /* السلايدرات والصور الكسولة تغيّر كلاساتها باستمرار؛ كانت كل تغييرة تُطلق
+       apply (قياس + getComputedStyle) فيثقل التمرير. نتجاهل ما لا يخص النوافذ. */
+    var relevant = function (n) {
+      if (n === document.body || n === document.documentElement) return true;
+      var c = (typeof n.className === 'string' ? n.className : '') + ' ' + (n.tagName || '');
+      return /modal/i.test(c);
+    };
     if (window.MutationObserver) {
       var t = 0;
-      new MutationObserver(function () {
-        clearTimeout(t); t = setTimeout(apply, 60);
+      new MutationObserver(function (list) {
+        for (var i = 0; i < list.length; i++) {
+          if (relevant(list[i].target)) { clearTimeout(t); t = setTimeout(apply, 60); return; }
+        }
       }).observe(document.documentElement, { attributes: true, subtree: true, attributeFilter: ['class'] });
     }
-    setInterval(apply, 1200);
+    setInterval(apply, 2500);
   }
 
   /* هل نحن داخل التطبيق؟ نعتمد على وسم المتصفح أولاً لأنه يوجد دائماً،
