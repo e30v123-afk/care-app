@@ -204,6 +204,10 @@
          ومثلها شريط «أضف للسلة» المثبّت في صفحة المنتج. */
       'html.care-app .s-cart-summary-card--mobile,html.care-app .sticky-product-bar{',
       'padding-bottom:calc(78px + var(--care-sab, env(safe-area-inset-bottom, 0px)))!important;z-index:99980!important}',
+      /* صفحة الدفع: نخفي شريط التطبيق كلياً حتى لا يغطي زر تأكيد الطلب/الدفع في أي مرحلة.
+         الرجوع متاح بشعار المتجر أعلى الصفحة وبالسحب من حافة الشاشة. */
+      'html.care-checkout #carebar{display:none!important}',
+      'html.care-checkout body{padding-bottom:var(--care-sab, env(safe-area-inset-bottom, 0px))!important}',
       /* زر المشاركة في صفحة المنتج: فوق شريط «أضف للسلة» وفي الجهة المقابلة لأداة واتساب */
       'html.care-prod #careshare{bottom:calc(196px + var(--care-sab, env(safe-area-inset-bottom, 0px)));',
       'inset-inline-start:auto;inset-inline-end:14px}',
@@ -667,6 +671,7 @@
     document.documentElement.classList.add('care-app');
     if (/^\/(cart|checkout)/.test(path())) document.documentElement.classList.add('care-cart');
     if (/\/p\d/.test(path())) document.documentElement.classList.add('care-prod');
+    if (/^\/checkout/.test(path())) document.documentElement.classList.add('care-checkout');
     viewportFit();
     styles();
     safeTop();
