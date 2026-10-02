@@ -50,6 +50,18 @@ workflows:
           /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string 'أولوية العناية'" "$PLIST"
           /usr/libexec/PlistBuddy -c "Delete :UISupportedInterfaceOrientations~ipad" "$PLIST" 2>/dev/null || true
 
+          # أذونات الكاميرا والصور: أي حقل رفع صورة في المتجر (صورة الحساب، صورة التقييم)
+          # يعرض «التقاط صورة»، وبدون هذه النصوص يُنهي iOS التطبيق فوراً — رفض آبل 2.1(a) في 2026-10-01
+          add_usage() {
+            /usr/libexec/PlistBuddy -c "Delete :$1" "$PLIST" 2>/dev/null || true
+            /usr/libexec/PlistBuddy -c "Add :$1 string '$2'" "$PLIST"
+          }
+          add_usage NSCameraUsageDescription "يستخدم التطبيق الكاميرا لالتقاط صورة ترفقها مع تقييمك للمنتج أو تضعها صورة لحسابك."
+          add_usage NSPhotoLibraryUsageDescription "يستخدم التطبيق مكتبة الصور لاختيار صورة ترفقها مع تقييمك للمنتج أو تضعها صورة لحسابك."
+          add_usage NSPhotoLibraryAddUsageDescription "يحفظ التطبيق الصور التي تختار حفظها من المتجر في مكتبة الصور."
+          add_usage NSMicrophoneUsageDescription "يستخدم التطبيق الميكروفون فقط عند تسجيل فيديو ترفقه من الكاميرا."
+          /usr/libexec/PlistBuddy -c "Print :NSCameraUsageDescription" "$PLIST"
+
           # أضف الملفين إلى هدف البناء واحصر التطبيق في الآيفون
           gem list -i xcodeproj >/dev/null 2>&1 || sudo gem install xcodeproj --no-document
           ruby -e '

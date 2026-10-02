@@ -199,6 +199,16 @@
       'html.care-app [id^="gb-widget"],html.care-app #gb-waw-iframe,html.care-app iframe[id*="waw"],',
       'html.care-app .whatsapp_float,html.care-app [class*="whats"][class*="float"]',
       '{bottom:calc(82px + var(--care-sab, env(safe-area-inset-bottom, 0px)))!important}',
+      /* بطاقة «الإجمالي + إتمام الطلب» في صفحة السلة مثبّتة أسفل الشاشة (z=1)، فكان شريط التطبيق
+         يغطي زر «إتمام الطلب» كلياً. نمدّ حشوتها السفلية بارتفاع الشريط فيصعد الزر فوقه.
+         ومثلها شريط «أضف للسلة» المثبّت في صفحة المنتج. */
+      'html.care-app .s-cart-summary-card--mobile,html.care-app .sticky-product-bar{',
+      'padding-bottom:calc(78px + var(--care-sab, env(safe-area-inset-bottom, 0px)))!important;z-index:99980!important}',
+      /* زر المشاركة في صفحة المنتج: فوق شريط «أضف للسلة» وفي الجهة المقابلة لأداة واتساب */
+      'html.care-prod #careshare{bottom:calc(196px + var(--care-sab, env(safe-area-inset-bottom, 0px)));',
+      'inset-inline-start:auto;inset-inline-end:14px}',
+      /* في السلة تغطي أداة واتساب مبلغ الإجمالي — نخفيها هناك فقط */
+      'html.care-cart [id^="gb-widget"]{opacity:0!important;pointer-events:none!important}',
       /* زر «العودة للأعلى» في الموقع يجلس فوق الشريط ويغطي تبويب الرئيسية */
       'html.care-app #scrollUp,html.care-app [id*="scrollUp"],html.care-app [class*="scroll-top"],',
       'html.care-app [class*="scrollToTop"],html.care-app [class*="back-to-top"]',
@@ -655,6 +665,8 @@
   /* ---------- الإقلاع ---------- */
   function boot() {
     document.documentElement.classList.add('care-app');
+    if (/^\/(cart|checkout)/.test(path())) document.documentElement.classList.add('care-cart');
+    if (/\/p\d/.test(path())) document.documentElement.classList.add('care-prod');
     viewportFit();
     styles();
     safeTop();
@@ -672,7 +684,14 @@
     var lift = function () {
       var w = document.querySelector('[id^="gb-widget"]');
       if (w) {
-        w.style.setProperty('bottom', 'calc(82px + var(--care-sab, env(safe-area-inset-bottom, 0px)))', 'important');
+        // في صفحة المنتج شريط «أضف للسلة» مثبّت فوق شريط التطبيق، فنرفع الأداة فوقه أيضاً
+        var want = 'calc(' + (/\/p\d/.test(path()) ? 196 : 82) + 'px + var(--care-sab, env(safe-area-inset-bottom, 0px)))';
+        var set = function () {
+          if (w.style.getPropertyValue('bottom') !== want) w.style.setProperty('bottom', want, 'important');
+        };
+        set();
+        // الأداة تعيد كتابة style عنصرها بعد التحميل فترجع لـ14px — نعيد الرفع كلما غيّرته
+        if (window.MutationObserver) new MutationObserver(set).observe(w, { attributes: true, attributeFilter: ['style'] });
         return;
       }
       if (++n < 20) setTimeout(lift, 1000);
